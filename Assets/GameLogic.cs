@@ -1,35 +1,32 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
-
-
+using UnityEngine.UI; 
 
 public class GameLogic : MonoBehaviour
 {
-
     public GameObject[] squares;
-    public AudioSource[] squareAudiosources;
+    public AudioSource[] squareAudioSources;
     public int score = 0;
     public int lives = 3;
+    public Text scoreText; // UI text for displaying score
+    public Text livesText; //  UI text for displaying lives
 
     private List<int> sequence;
     private List<int> playerInput;
     private bool acceptingInput;
     private int currentIndex = 0;
 
-
     // Start is called before the first frame update
     void Start()
     {
         playerInput = new List<int>();
         squares = GameObject.FindGameObjectsWithTag("Square");
-        squareAudiosources = new AudioSource[squares.Length];
+        squareAudioSources = new AudioSource[squares.Length];
 
         for (int i = 0; i < squares.Length; i++)
         {
-            squareAudiosources[i] = squares[i].GetComponent<AudioSource>();
+            squareAudioSources[i] = squares[i].GetComponent<AudioSource>();
         }
 
         StartGame();
@@ -41,169 +38,124 @@ public class GameLogic : MonoBehaviour
         CheckPlayerInput();
     }
 
-
     void StartGame()
     {
         score = 0;
         lives = 3;
         sequence = new List<int>();
+        playerInput = new List<int>();
 
-
-        //start game loop
+        // start game loop
         StartCoroutine(GameLoop());
     }
 
     IEnumerator GameLoop()
     {
-
-
         while (true)
         {
-
-            //generate sequence
-
+            // generate sequence
             GenerateSequence();
             yield return new WaitForSeconds(2f);
 
-
-            //play sequence
+            // play sequence
             StartCoroutine(PlaySequence());
 
-
-            //check Player input
-
+            // check player input
             currentIndex = 0;
+            playerInput.Clear(); // clear previous player input
+            acceptingInput = true;
             yield return new WaitUntil(() => currentIndex == sequence.Count);
 
-
-            //check if correct and update score and lives
+            // check correctness and update score/lives
             CheckPlayerInput();
             UpdateScoreAndLives();
-
-
         }
     }
-
-
-    void GenerateSequence()
-    {
-
-        // generate a new random sequence
-
-        sequence.Clear();
-        for (int i = 0; i < 3; i++) // sequence length
-
-        {
-            int randomIndex = Random.Range(0, squares.Length);
-            sequence.Add(randomIndex);
-        }
-
-
-
-    }
-
 
     IEnumerator PlaySequence()
     {
         foreach (int index in sequence)
         {
-
-            //Hightlight square and play xylophone sound attached to square
+            // Highlight square and play xylophone sound attached to the square
             squares[index].GetComponent<Renderer>().material.color = Color.white;
             squareAudioSources[index].Play();
 
-            yield return new WaitForSeconds(if) ;
+            yield return new WaitForSeconds(1f);
 
-            //reset square color after playing
-
-            squares[index].GetComponent<Renderer>.material.color = Color.grey;
+            // Reset square color after playing
+            squares[index].GetComponent<Renderer>().material.color = Color.grey;
         }
     }
 
-
-
-
     void CheckPlayerInput()
     {
-        //check player input
-        //compare input against the current sequence
-        //if correct,increment currentIndex
+        // check player input
+        // compare input against the current sequence
+        // if correct, increment currentIndex
 
         if (Input.GetMouseButtonDown(0) && acceptingInput)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-        }
 
-        if (Physics.Raycast(ray, out hit))
-        {
-
-            //check if squares is clicked
-
-            GameObject clickedSquare = hit.collider.gameObject;
-            int squareIndex = System.Array.IndexOf(squares, clickedSquare);
-
-            if (squareIndex != -1)
+            if (Physics.Raycast(ray, out hit))
             {
-                playerInput.Add(squareIndex);
+                // check if square is clicked
+                GameObject clickedSquare = hit.collider.gameObject;
+                int squareIndex = System.Array.IndexOf(squares, clickedSquare);
 
-                if (CheckCorrectness())
+                if (squareIndex != -1)
                 {
-                    lives--;
-                    UpdateScoreAndLives();
+                    // Player clicked on a square
+                    playerInput.Add(squareIndex);
 
-                    //check if game over
-
-                    if (lives <= 0)
+                    // Check correctness
+                    if (!CheckCorrectness())
                     {
-                        GameOver();
+                        // Incorrect input, decrement lives
+                        lives--;
+                        UpdateScoreAndLives();
 
-                    }
-                    else
-                    {
-                        ResetGame();
+                        // Check if game over
+                        if (lives <= 0)
+                        {
+                            GameOver();
+                        }
+                        else
+                        {
+                            // Incorrect input, reset sequence and restart the game loop
+                            ResetGame();
+                        }
                     }
                     else if (playerInput.Count == sequence.Count)
-                    { // correct input for sequence
-
-                        score += 5;
+                    { // correct input for the sequence
+                        score += 5; // gives 5 points
                         UpdateScoreAndLives();
                         ResetGame();
-
                     }
                 }
             }
-
         }
-
-
     }
-
 
     void UpdateScoreAndLives()
     {
-        //update score and lives based on player input
-        //increment score for correct input
-        //decrement score for incorrect input
+        // update score and lives based on player input
+        // increment score for correct input
+        // decrement score for incorrect input
 
-        scoreText.text = "Score:  " + score;
-
-        livesText.text = "Lives:  " + lives;
-
-
-
+        scoreText.text = "Score: " + score;
+        livesText.text = "Lives: " + lives;
     }
 
     void ResetGame()
     {
-        // reset for next round
+        // reset for the next round
         playerInput.Clear();
         acceptingInput = false;
 
-
-        //restart game loop after delay
+        // restart game loop after delay
         StartCoroutine(RestartGameAfterDelay(2f));
-
     }
 
     IEnumerator RestartGameAfterDelay(float delay)
@@ -212,19 +164,32 @@ public class GameLogic : MonoBehaviour
         acceptingInput = true;
         StartCoroutine(GameLoop());
     }
+
     bool CheckCorrectness()
     {
-        for (int i = 0; i< playerInput.Count; i++)
+        for (int i = 0; i < playerInput.Count; i++)
         {
             if (playerInput[i] != sequence[i])
             {
                 return false; // incorrect input
             }
         }
-
         return true; // correct input
-
     }
 
-}
+    void GenerateSequence()
+    {
+        // generate a new random sequence
+        sequence.Clear();
+        for (int i = 0; i < 3; i++) // sequence length
+        {
+            int randomIndex = Random.Range(0, squares.Length);
+            sequence.Add(randomIndex);
+        }
+    }
 
+    void GameOver()
+    {
+        Debug.Log("Game Over!");
+    }
+}
