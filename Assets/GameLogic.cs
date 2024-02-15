@@ -23,6 +23,9 @@ public class GameLogic : MonoBehaviour
     private float timerDuration = 10f;
     private float timer;
 
+    private bool ComputerSequenceIsPlaying, ComputerSequenceHasCompleted;
+    private bool PlayerWaitingForInput, PlayerInputComplete;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -49,7 +52,11 @@ public class GameLogic : MonoBehaviour
     void Update()
     {
         UpdateTimerText();
-        StartCoroutine(PlayerTurn());
+        //StartCoroutine(PlayerTurn());
+        if (acceptingInput)
+        {
+            PlayerTurn();
+        }
     }
 
     void StartGame()
@@ -59,7 +66,7 @@ public class GameLogic : MonoBehaviour
         sequence = new List<int>();
         playerInput = new List<int>();
         currentIndex = 0;
-
+        PlayerInputComplete = true;
         // start game loop
         StartCoroutine(GameLoop());
 
@@ -74,33 +81,46 @@ public class GameLogic : MonoBehaviour
             // Computer's turn
             turnText.text = "Computer's Turn";
             GenerateSequence();
-            yield return StartCoroutine(PlaySequence());
 
-            // Wait for the sequence to be played
-            yield return new WaitForSeconds(sequence.Count * 1.5f);
+            if (PlayerInputComplete)
+            {
+                PlayerInputComplete = false;
 
-            // Player's turn
-            turnText.text = "Player's Turn";
+                playerInput.Clear();
+                acceptingInput = false;
+                currentIndex = 0;
+
+
+                yield return StartCoroutine(PlaySequence());
+            }
+            //Check that the player has completed first
             acceptingInput = true;
             timer = timerDuration;
 
+            turnText.text = "Player's Turn";
+
+
+
+            // Wait for the sequence to be played
+            //yield return new WaitForSeconds(sequence.Count * 1.5f);
+
+            // Player's turn
+
+
             // Wait for the player to input or timeout
-            while (playerInput.Count < sequence.Count && timer > 0)
-            {
-                timer -= Time.deltaTime;
-                yield return null;
-            }
+            //while (playerInput.Count < sequence.Count && timer > 0)
+            //{
+            //    timer -= Time.deltaTime;
+            //    yield return null;
+            //}
 
             // Check correctness and update score/lives
-            OnPlayerTurn(sequence);
+            //OnPlayerTurn(sequence);
 
             // Reset variables for the next round
-            playerInput.Clear();
-            acceptingInput = false;
-            currentIndex = 0;
 
             // Restart the game loop after a delay
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(.03f);
         }
     }
 
@@ -108,7 +128,7 @@ public class GameLogic : MonoBehaviour
     {
         int steps = Random.Range(3, 5); // Randomly choose 3 or 4 steps
         List<int> computerSequence = new List<int>();
-
+        ComputerSequenceIsPlaying = true;
         for (int i = 0; i < steps; i++)
         {
             int index = Random.Range(0, squares.Length);
@@ -134,16 +154,23 @@ public class GameLogic : MonoBehaviour
         }
 
         // Wait for a delay before player's turn
-        yield return new WaitForSeconds(2f);
-
+        yield return new WaitForSeconds(.5f);
+        ComputerSequenceIsPlaying = false;
+        ComputerSequenceHasCompleted = true;
         // Notify the player's turn
         OnPlayerTurn(computerSequence);
-    }
 
+
+    }
+    /// <summary>
+    /// THIS FUNCTION HANDLES THE TRANSITION INTO THE PLAYERS PLAYING THE GAME.  NO C ROUTINES ETC JUST SHOW THE BOARD, SET YOUR STATE WAIT FOR INPUT.
+    /// </summary>
+    /// <param name="computerSequence"></param>
     void OnPlayerTurn(List<int> computerSequence)
     {
         // This method is called when it's the player's turn
         // You should compare the player's input with the computer's sequence
+      
 
         // Continue with the rest of the logic in OnPlayerTurn
         bool sequenceCorrect = true;
@@ -177,25 +204,26 @@ public class GameLogic : MonoBehaviour
         }
         else
         {
-            // If the sequence is correct or there are more steps to input
-            if (sequenceCorrect || currentIndex < computerSequence.Count)
-            {
-                // Increment currentIndex for the next step in the sequence
-                currentIndex++;
+            //// If the sequence is correct or there are more steps to input
+            //if (sequenceCorrect || currentIndex < computerSequence.Count)
+            //{
+            //    // Increment currentIndex for the next step in the sequence
+            //    currentIndex++;
 
-                // If there are more steps, wait for a short duration before the next input
-                if (currentIndex < computerSequence.Count)
-                {
-                    StartCoroutine(WaitForPlayerInput());
-                }
-                else
-                {
-                    // If the entire sequence is correct, reset variables for the next round
-                    currentIndex = 0;
-                    acceptingInput = false;
-                    StartCoroutine(RestartGameAfterDelay(1f));
-                }
-            }
+            //    // If there are more steps, wait for a short duration before the next input
+            //    if (currentIndex < computerSequence.Count)
+            //    {
+            //        StartCoroutine(WaitForPlayerInput());
+            //    }
+            //    else
+            //    {
+            //        // If the entire sequence is correct, reset variables for the next round
+            //        currentIndex = 0;
+            //        acceptingInput = false;
+            //        StartCoroutine(RestartGameAfterDelay(1f));
+            //    }
+            //}
+            acceptingInput = true;
         }
     }
 
@@ -205,8 +233,10 @@ public class GameLogic : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
     }
 
-    IEnumerator PlayerTurn()
+    void PlayerTurn()
     {
+        ComputerSequenceHasCompleted = false;
+        PlayerWaitingForInput = true;
         // Enable player input only during the player's turn
         if (acceptingInput)
         {
@@ -234,15 +264,16 @@ public class GameLogic : MonoBehaviour
                         if (playerInput.Count == sequence.Count)
                         {
                             // Wait for a short duration before restarting the game loop
-                            yield return new WaitForSeconds(1f);
+                            //yield return new WaitForSeconds(1f);
+                            PlayerWaitingForInput = false;
+                            PlayerInputComplete = true;
                             ResetGame();
+                            
                         }
                     }
                 }
             }
-
             // Return null to satisfy IEnumerator
-            yield return null;
         }
     }
 
